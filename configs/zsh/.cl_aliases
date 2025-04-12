@@ -1,0 +1,36 @@
+
+alias x="run xwin -multiwindow"
+
+alias xt='xterm -geometry 115x70+1 &'
+
+alias less='less -r'                          # raw control characters
+alias whence='type -a'                        # where, of a sort
+alias grep='grep --color'                     # show differences in colour
+alias egrep='egrep --color=auto'              # show differences in colour
+alias fgrep='fgrep --color=auto'              # show differences in colour
+
+alias grep='grep --color'
+alias ls='ls -a -l --color'
+alias rm='mv --force --target-directory=$HOME/.myrm'
+alias vim='nvim'
+alias lg='lazygit'
+
+alias pj='conda activate janet && export AWS_PROFILE=janet_power && aws sso login --no-browser'
+
+alias ctj='
+  codetree -o ~/projects/llm_uploads/infra.llm -s ~/projects/janet/infrastructure "*" &&
+  codetree -o ~/projects/llm_uploads/backend.llm -s ~/projects/janet/backend "*.py" "*.txt" "*.css" "*.html" &&
+  codetree -o ~/projects/llm_uploads/frontend.llm -s ~/projects/janet/frontend "*.html" "*.js" "*.jsx" "*.css" 
+  '
+
+alias ctm='
+  codetree -o ~/projects/llm_uploads/maps_infra.llm -s ~/projects/maps/infrastructure "*"
+  '
+
+alias ctac='
+  codetree -o ~/projects/llm_uploads/ac.llm -s ~/projects/aws_controller "*.py" "*.txt" "*.css" "*.html" 
+  '
+
+alias ctd='
+  codetree -o ~/projects/llm_uploads/dotfiles.llm -s ~/jj-stankowicz/dotfiles "*"
+  '
