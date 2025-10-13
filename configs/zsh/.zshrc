@@ -141,6 +141,7 @@ function codetree() {
   local source_dir="."  # Default to current directory
   local patterns=("*.py")  # Default pattern
   local original_dir=$(pwd)  # Store original directory
+  local omit_dirs=()  # Initialize empty array for directories to omit
 
   # Parse arguments
   while [[ $# -gt 0 ]]; do
@@ -155,6 +156,10 @@ function codetree() {
         ;;
       --source|-s)
         source_dir="$2"
+        shift 2
+        ;;
+      --omit)
+        omit_dirs+=("$2")
         shift 2
         ;;
       *)
@@ -199,6 +204,16 @@ function codetree() {
 
   # Store the excluded patterns in a variable for consistency
   local exclude_pattern="*.pyc|*.pyo|__pycache__|*.egg-info|*.so|*.o|*.class|node_modules|.git|build|dist"
+  
+  # Add user-specified directories to exclude
+  if (( ${#omit_dirs[@]} > 0 )); then
+    for dir in "${omit_dirs[@]}"; do
+      exclude_pattern+="$([[ -n "$exclude_pattern" ]] && echo '|')${dir}"
+    done
+    if [[ "$debug" = true ]]; then
+      echo "Excluding directories: ${omit_dirs[*]}"
+    fi
+  fi
 
   # Add tree structure first
   if [[ "$debug" = true ]]; then
@@ -214,16 +229,19 @@ function codetree() {
 
   # Use find to get sorted list of files and add contents
   for pattern in "${patterns[@]}"; do
-    find . \
-      -name "${pattern}" \
-      ! -path "*/\.*" \
-      ! -path "*/__pycache__/*" \
-      ! -path "*/node_modules/*" \
-      ! -path "*/build/*" \
-      ! -path "*/dist/*" \
-      ! -path "*.egg-info/*" \
-      -type f \
-      -print0 | sort -z | while IFS= read -r -d $'\0' file; do
+    # Start building the find command
+    local find_cmd="find . -name \"${pattern}\" ! -path \"*/\\.*\" ! -path \"*/__pycache__/*\" ! -path \"*/node_modules/*\" ! -path \"*/build/*\" ! -path \"*/dist/*\" ! -path \"*.egg-info/*\""
+    
+    # Add user-specified directories to exclude
+    for dir in "${omit_dirs[@]}"; do
+      find_cmd+=" ! -path \"*/${dir}/*\""
+    done
+    
+    # Complete the find command
+    find_cmd+=" -type f -print0"
+    
+    # Execute the find command
+    eval "${find_cmd}" | sort -z | while IFS= read -r -d $'\0' file; do
         echo -e "\n### ${file} ###" >> "${output_file}"
         if [[ "$debug" = true ]]; then
           echo "# File size: $(wc -c < "${file}") bytes" >> "${output_file}"
@@ -247,4 +265,12 @@ function codetree() {
 export PYTHONBREAKPOINT=ipdb.set_trace
 
 git config --global user.name "JJ Stankowicz"
-git config --global user.email "jj.stankowicz@raventures.com"
+git config --global user.email "jj.stankowicz@gmail.com"
+
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+export PATH="/snap/bin:$PATH"
+
+. "$HOME/.local/bin/env"

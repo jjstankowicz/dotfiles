@@ -87,7 +87,7 @@ require("lazy").setup({
   
   -- Formatting and linting
   {
-    "jose-elias-alvarez/null-ls.nvim",
+  "nvimtools/none-ls.nvim",
     dependencies = {
       "nvim-lua/plenary.nvim",
     },
@@ -215,7 +215,6 @@ vim.diagnostic.config({
 
 
 local lspconfig = require('lspconfig')
-local null_ls = require("null-ls")
 
 -- Set up lspconfig capabilities for completion
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
@@ -254,9 +253,9 @@ local augroup = vim.api.nvim_create_augroup("LspFormatting", {})  -- Add this li
 null_ls.setup({
     sources = {
         null_ls.builtins.diagnostics.pylint,
-         null_ls.builtins.diagnostics.flake8.with({
-            extra_args = { "--max-line-length", "100" },
-        }),
+        -- null_ls.builtins.diagnostics.ruff.with({
+        --     extra_args = { "--max-line-length", "100" },
+        -- }),
         null_ls.builtins.formatting.black.with({
             extra_args = { "--line-length", "100" },
         })

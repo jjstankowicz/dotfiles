@@ -15,22 +15,40 @@ alias rm='mv --force --target-directory=$HOME/.myrm'
 alias vim='nvim'
 alias lg='lazygit'
 
-alias pj='conda activate janet && export AWS_PROFILE=janet_power && aws sso login --no-browser'
+alias ctt='codetree -o ~/projects/llm_uploads/traj.llm -s ~/projects/trajectories "*.py" "*.txt" "*.css" "*.html"'
 
-alias ctj='
-  codetree -o ~/projects/llm_uploads/infra.llm -s ~/projects/janet/infrastructure "*" &&
-  codetree -o ~/projects/llm_uploads/backend.llm -s ~/projects/janet/backend "*.py" "*.txt" "*.css" "*.html" &&
-  codetree -o ~/projects/llm_uploads/frontend.llm -s ~/projects/janet/frontend "*.html" "*.js" "*.jsx" "*.css" 
-  '
 
-alias ctm='
-  codetree -o ~/projects/llm_uploads/maps_infra.llm -s ~/projects/maps/infrastructure "*"
-  '
+# alias pj='conda activate janet && export AWS_PROFILE=janet_power && aws sso login --no-browser'
 
-alias ctac='
-  codetree -o ~/projects/llm_uploads/ac.llm -s ~/projects/aws_controller "*.py" "*.txt" "*.css" "*.html" 
-  '
+# alias ctj='
+#   codetree -o ~/projects/llm_uploads/infra.llm -s ~/projects/janet/infrastructure "*" &&
+#   codetree -o ~/projects/llm_uploads/backend.llm -s ~/projects/janet/backend "*.py" "*.txt" "*.css" "*.html" &&
+#   codetree -o ~/projects/llm_uploads/frontend.llm -s ~/projects/janet/frontend "*.html" "*.js" "*.jsx" "*.css" 
+#   '
+
+# alias ctm='
+#   codetree -o ~/projects/llm_uploads/maps_infra.llm -s ~/projects/maps/infrastructure "*"
+#   '
+
+# alias ctac='
+#   codetree -o ~/projects/llm_uploads/ac.llm -s ~/projects/aws_controller "*.py" "*.txt" "*.css" "*.html" 
+#   '
 
 alias ctd='
   codetree -o ~/projects/llm_uploads/dotfiles.llm -s ~/jj-stankowicz/dotfiles "*"
   '
+
+alias ctr='
+  codetree -o ~/projects/llm_uploads/read.llm -s ~/projects/read "*.py" "*.txt"
+  '
+
+alias ctad='
+  codetree --omit logs --omit sync -o ~/projects/llm_uploads/ad.llm -s ~/projects/ad-omics "*.py" "*.txt"
+  '
+
+alias uva='source .venv/bin/activate'
+alias uvd='deactivate'
+alias tb='tensorboard --logdir=logs/tensorboard'
+
+alias mlf_start='mlflow ui --backend-store-uri=file:./logs/mlflow'
+alias mlf_stop='pkill -f "mlflow"'
