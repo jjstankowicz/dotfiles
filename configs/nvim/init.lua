@@ -62,14 +62,32 @@ require("lazy").setup({
       "hashicorp/terraform-ls",
     },
   },
-  
-  -- Color scheme
+  -- Color schemes
+  {
+    "sainnhe/everforest",
+    lazy = false,
+    priority = 1000,
+  },
+  {
+    "sainnhe/edge",
+    lazy = false,
+    priority = 1000,
+  },
+  {
+    "rebelot/kanagawa.nvim",
+    lazy = false,
+    priority = 1000,
+  },
+  {
+    "folke/tokyonight.nvim",
+    lazy = false,
+    priority = 999,
+  },
   {
     "catppuccin/nvim",
     name = "catppuccin",
-    priority = 1000,
+    priority = 900,
   },
-  
   -- Treesitter
   {
     "nvim-treesitter/nvim-treesitter",
@@ -214,13 +232,15 @@ vim.diagnostic.config({
 })
 
 
-local lspconfig = require('lspconfig')
-
--- Set up lspconfig capabilities for completion
+-- LSP capabilities for completion, applied to all servers
 local capabilities = require('cmp_nvim_lsp').default_capabilities()
 
--- After your lspconfig setup, add:
-lspconfig.pyright.setup({
+vim.lsp.config('*', {
+  capabilities = capabilities,
+})
+
+-- Pyright configuration using the new vim.lsp.config API
+vim.lsp.config('pyright', {
   settings = {
     python = {
       analysis = {
@@ -229,23 +249,25 @@ lspconfig.pyright.setup({
         diagnosticSeverityOverrides = {
           reportGeneralTypeIssues = "error",
           reportShadowedImports = "error",
-        }
-      }
-    }
+        },
+      },
+    },
   },
-  -- Add this root_dir configuration
   root_dir = function(fname)
-    return require("lspconfig.util").find_git_ancestor(fname)
-        or require("lspconfig.util").path.dirname(fname)
+    local util = require('lspconfig.util')
+    return util.find_git_ancestor(fname) or util.path.dirname(fname)
   end,
-  -- Add this to handle the Node.js warning
   before_init = function(_, config)
     config.init_options = {
       maxProjectFiles = 10000,
-      maxListeners = 20
+      maxListeners = 20,
     }
-  end
+  end,
 })
+
+-- Enable Pyright (auto-start based on filetype/root)
+vim.lsp.enable('pyright')
+
 
 -- Setup null-ls
 local null_ls = require("null-ls")
@@ -394,4 +416,5 @@ vim.api.nvim_create_autocmd("BufWritePre", {
 })
 
 -- Set colorscheme
-vim.cmd.colorscheme("catppuccin-latte")
+vim.o.background = "dark"
+vim.cmd.colorscheme("tokyonight-night")
