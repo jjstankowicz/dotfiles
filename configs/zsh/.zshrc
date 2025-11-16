@@ -1,55 +1,55 @@
 # SSH Agent Management
-ssh_agent_start() {
-    # Don't run if we're in an SSH session
-    if [[ -n "$SSH_CLIENT" ]] || [[ -n "$SSH_TTY" ]]; then
-        return
-    fi
+# ssh_agent_start() {
+#     # Don't run if we're in an SSH session
+#     if [[ -n "$SSH_CLIENT" ]] || [[ -n "$SSH_TTY" ]]; then
+#         return
+#     fi
+#
+#     # Path to store the agent environment variables
+#     local agent_env="$HOME/.ssh/agent.env"
+#
+#     # Source the stored agent environment if it exists
+#     if [ -f "$agent_env" ]; then
+#         source "$agent_env" >/dev/null
+#     fi
+#
+#     # Check if agent is still running
+#     if ! kill -0 $SSH_AGENT_PID >/dev/null 2>&1; then
+#         # Start new agent
+#         mkdir -p "$(dirname "$agent_env")"
+#         ssh-agent > "$agent_env"
+#         source "$agent_env" >/dev/null
+#     fi
+#
+#     # Load keys if agent has none
+#     ssh-add -l >/dev/null 2>&1 || ssh-add
+# }
 
-    # Path to store the agent environment variables
-    local agent_env="$HOME/.ssh/agent.env"
-
-    # Source the stored agent environment if it exists
-    if [ -f "$agent_env" ]; then
-        source "$agent_env" >/dev/null
-    fi
-
-    # Check if agent is still running
-    if ! kill -0 $SSH_AGENT_PID >/dev/null 2>&1; then
-        # Start new agent
-        mkdir -p "$(dirname "$agent_env")"
-        ssh-agent > "$agent_env"
-        source "$agent_env" >/dev/null
-    fi
-
-    # Load keys if agent has none
-    ssh-add -l >/dev/null 2>&1 || ssh-add
-}
-
-# Debug function with more verbose output
-ssh_agent_debug() {
-    local agent_env="$HOME/.ssh/agent.env"
-    echo "Current SSH_AUTH_SOCK: $SSH_AUTH_SOCK"
-    echo "Current SSH_AGENT_PID: $SSH_AGENT_PID"
-    
-    if [ -f "$agent_env" ]; then
-        echo "Agent environment file exists"
-        cat "$agent_env"
-    else
-        echo "No agent environment file found"
-    fi
-    
-    echo "Checking for running agents:"
-    pgrep -l ssh-agent
-    
-    echo "Loaded keys:"
-    ssh-add -l || echo "No keys loaded"
-}
+# # Debug function with more verbose output
+# ssh_agent_debug() {
+#     local agent_env="$HOME/.ssh/agent.env"
+#     echo "Current SSH_AUTH_SOCK: $SSH_AUTH_SOCK"
+#     echo "Current SSH_AGENT_PID: $SSH_AGENT_PID"
+#     
+#     if [ -f "$agent_env" ]; then
+#         echo "Agent environment file exists"
+#         cat "$agent_env"
+#     else
+#         echo "No agent environment file found"
+#     fi
+#     
+#     echo "Checking for running agents:"
+#     pgrep -l ssh-agent
+#     
+#     echo "Loaded keys:"
+#     ssh-add -l || echo "No keys loaded"
+# }
 
 # Alias for debugging
-alias fixssh='ssh_agent_debug'
+# alias fixssh='ssh_agent_debug'
 
 # Start the agent
-ssh_agent_start
+# ssh_agent_start
 
 
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
@@ -273,4 +273,29 @@ export NVM_DIR="$HOME/.nvm"
 
 export PATH="/snap/bin:$PATH"
 
-. "$HOME/.local/bin/env"
+# . "$HOME/.local/bin/env"
+echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
+
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
