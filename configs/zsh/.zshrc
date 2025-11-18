@@ -135,132 +135,89 @@ fi
 
 ### Code dump for LLM help
 
-function codetree() {
-  local debug=false
-  local output_file="code_dump.txt"
-  local source_dir="."  # Default to current directory
-  local patterns=("*.py")  # Default pattern
-  local original_dir=$(pwd)  # Store original directory
-  local omit_dirs=()  # Initialize empty array for directories to omit
+codetree() {
+  local src_dir="."
+  local outfile="CODETREE.txt"
+  local omit_patterns=()
 
-  # Parse arguments
   while [[ $# -gt 0 ]]; do
     case $1 in
-      --debug)
-        debug=true
-        shift
-        ;;
-      --output|-o)
-        output_file="$2"
-        shift 2
-        ;;
-      --source|-s)
-        source_dir="$2"
-        shift 2
-        ;;
-      --omit)
-        omit_dirs+=("$2")
-        shift 2
-        ;;
-      *)
-        # All remaining args are treated as patterns
-        patterns=("$@")
-        break
-        ;;
+      --source|-s) src_dir="$2"; shift 2 ;;
+      --output|-o) outfile="$2"; shift 2 ;;
+      --omit) omit_patterns+=("$2"); shift 2 ;;
+      *) shift ;;
     esac
   done
 
-  # Verify source directory exists
-  if [[ ! -d "${source_dir}" ]]; then
-    echo "Error: Source directory '${source_dir}' does not exist"
-    return 1
-  fi
+  {
+    echo "=== GIT FILES ==="
+    git -C "$src_dir" ls-files
 
-  # Change to source directory
-  pushd "${source_dir}" >/dev/null || {
-    echo "Error: Could not change to directory '${source_dir}'"
-    return 1
-  }
+    echo
+    echo "=== TREE VIEW (git-tracked only) ==="
+    (
+      cd "$src_dir" || exit 1
+      git ls-files | sed 's|^|./|' | tree --fromfile .
+    )
 
-  # Print debug info if enabled
-  if [[ "$debug" = true ]]; then
-    echo "Running codetree from directory: $(pwd)"
-    echo "Original directory: ${original_dir}"
-  fi
+    echo
+    echo "=== FILE CONTENTS ==="
 
-  # Create/clear the output file
-  # Use absolute path if output file path is relative
-  if [[ "${output_file:0:1}" != "/" ]]; then
-    output_file="${original_dir}/${output_file}"
-  fi
-  echo -n > "${output_file}"
-  
-  # Add debug info to output file if enabled
-  if [[ "$debug" = true ]]; then
-    echo "Generated from directory: $(pwd)" >> "${output_file}"
-    echo "Timestamp: $(date)" >> "${output_file}"
-    echo "===================" >> "${output_file}"
-  fi
+    git -C "$src_dir" ls-files | while read -r file; do
+      local skip=false
+      for pattern in "${omit_patterns[@]}"; do
+        [[ "$file" == *"$pattern"* ]] && skip=true && break
+      done
+      $skip && continue
 
-  # Store the excluded patterns in a variable for consistency
-  local exclude_pattern="*.pyc|*.pyo|__pycache__|*.egg-info|*.so|*.o|*.class|node_modules|.git|build|dist"
-  
-  # Add user-specified directories to exclude
-  if (( ${#omit_dirs[@]} > 0 )); then
-    for dir in "${omit_dirs[@]}"; do
-      exclude_pattern+="$([[ -n "$exclude_pattern" ]] && echo '|')${dir}"
+      echo "----- FILE START: $file -----"
+      cat "$src_dir/$file"
+      echo
+      echo "----- FILE END: $file -----"
+      echo
     done
-    if [[ "$debug" = true ]]; then
-      echo "Excluding directories: ${omit_dirs[*]}"
-    fi
-  fi
+  } > "$outfile"
+}
 
-  # Add tree structure first
-  if [[ "$debug" = true ]]; then
-    echo -e "\nDirectory Structure:" >> "${output_file}"
-    echo "===================" >> "${output_file}"
-  fi
-  tree -I "${exclude_pattern}" >> "${output_file}"
 
-  if [[ "$debug" = true ]]; then
-    echo -e "\nFile Contents:" >> "${output_file}"
-    echo "=============" >> "${output_file}"
-  fi
+codeextract() {
+  local src_dir="."
+  local output_dir="code_extract"
+  local omit_patterns=()
 
-  # Use find to get sorted list of files and add contents
-  for pattern in "${patterns[@]}"; do
-    # Start building the find command
-    local find_cmd="find . -name \"${pattern}\" ! -path \"*/\\.*\" ! -path \"*/__pycache__/*\" ! -path \"*/node_modules/*\" ! -path \"*/build/*\" ! -path \"*/dist/*\" ! -path \"*.egg-info/*\""
-    
-    # Add user-specified directories to exclude
-    for dir in "${omit_dirs[@]}"; do
-      find_cmd+=" ! -path \"*/${dir}/*\""
-    done
-    
-    # Complete the find command
-    find_cmd+=" -type f -print0"
-    
-    # Execute the find command
-    eval "${find_cmd}" | sort -z | while IFS= read -r -d $'\0' file; do
-        echo -e "\n### ${file} ###" >> "${output_file}"
-        if [[ "$debug" = true ]]; then
-          echo "# File size: $(wc -c < "${file}") bytes" >> "${output_file}"
-          echo "# Last modified: $(stat -f "%Sm" "${file}" 2>/dev/null || stat -c "%y" "${file}")" >> "${output_file}"
-          echo "# MD5 hash: $(md5sum "${file}" | cut -d' ' -f1)" >> "${output_file}"
-        fi
-        cat "${file}" >> "${output_file}"
-    done
+  while [[ $# -gt 0 ]]; do
+    case $1 in
+      --source|-s) src_dir="$2"; shift 2 ;;
+      --output|-o) output_dir="$2"; shift 2 ;;
+      --omit) omit_patterns+=("$2"); shift 2 ;;
+      *) shift ;;
+    esac
   done
 
-  # Return to original directory
-  popd >/dev/null
+  mkdir -p "$output_dir"
 
-  if [[ "$debug" = true ]]; then
-    echo "Code tree written to ${output_file} (debug mode)"
-  else
-    echo "Code tree written to ${output_file}"
-  fi
+  # Copy actual file contents into flattened filenames
+  git -C "$src_dir" ls-files | while read -r file; do
+    local skip=false
+    for pattern in "${omit_patterns[@]}"; do
+      [[ "$file" == *"$pattern"* ]] && skip=true && break
+    done
+    $skip && continue
+
+    local flat_name="${file//\//-SLASH-}"
+    cp "$src_dir/$file" "$output_dir/$flat_name"
+  done
+
+  # Add GIT.txt
+  git -C "$src_dir" ls-files > "$output_dir/GIT.txt"
+
+  # Add TREE.txt based on git files
+  (
+    cd "$src_dir" || exit 1
+    git ls-files | sed 's|^|./|' | tree --fromfile .
+  ) > "$output_dir/TREE.txt"
 }
+
 
 export PYTHONBREAKPOINT=ipdb.set_trace
 
@@ -276,25 +233,6 @@ export PATH="/snap/bin:$PATH"
 # . "$HOME/.local/bin/env"
 echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
 
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"

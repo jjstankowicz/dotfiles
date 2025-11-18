@@ -16,6 +16,14 @@ alias vim='nvim'
 alias lg='lazygit'
 
 alias ctt='codetree -o ~/projects/llm_uploads/traj.llm -s ~/projects/trajectories "*.py" "*.txt" "*.css" "*.html"'
+alias ctg='codetree -o ~/projects/llm_uploads/ghoul.llm -s ~/projects/ghoul "*.toml" 
+
+alias ceg='time=$(date +%Y%m%d_%H%M%S); \
+  codeextract \
+    --source "$HOME/projects/ghoul" \
+    --output "$HOME/projects/llm_uploads/ghoul_${time}" \
+    --omit docs/design.md'
+
 
 
 # alias pj='conda activate janet && export AWS_PROFILE=janet_power && aws sso login --no-browser'
