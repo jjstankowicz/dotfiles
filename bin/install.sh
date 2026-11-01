@@ -21,6 +21,13 @@ install_packages_for_os
 echo "Installing lazygit..."
 install_lazygit
 
+echo "Installing editor binaries..."
+install_neovim
+install_delta
+install_tree_sitter
+install_utftex
+install_termtex
+
 echo "Setting up shell environment..."
 setup_shell
 verify_shell_setup || echo "Warning: Some shell components may not have installed correctly"

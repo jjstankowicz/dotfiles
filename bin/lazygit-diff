@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# Render Lazygit diffs side by side using the enclosing editor's background.
+set -euo pipefail
+
+if [[ "${NVIM_LAZYGIT_BACKGROUND:-light}" == "dark" ]]; then
+    theme_options=(
+        --dark --syntax-theme OneHalfDark
+        --minus-style 'syntax #392c32'
+        --minus-emph-style 'syntax bold #653b43'
+        --plus-style 'syntax #243b30'
+        --plus-emph-style 'syntax bold #375d46'
+        --hunk-header-style 'bold #cccccc'
+        --hunk-header-decoration-style '#515151 ul'
+        --line-numbers-minus-style '#f14c4c'
+        --line-numbers-plus-style '#8fbc8f'
+        --line-numbers-zero-style '#858585'
+        --line-numbers-left-style '#858585'
+        --line-numbers-right-style '#858585'
+    )
+else
+    theme_options=(
+        --light --syntax-theme GitHub
+        --minus-style 'syntax #f7e5e7'
+        --minus-emph-style 'syntax bold #eebbc2'
+        --plus-style 'syntax #e4f0e6'
+        --plus-emph-style 'syntax bold #badcbd'
+        --hunk-header-style 'bold #616161'
+        --hunk-header-decoration-style '#b8b8b8 ul'
+        --line-numbers-minus-style '#a1260d'
+        --line-numbers-plus-style '#2f6f42'
+        --line-numbers-zero-style '#616161'
+        --line-numbers-left-style '#616161'
+        --line-numbers-right-style '#616161'
+    )
+fi
+
+exec "$HOME/.local/bin/delta" \
+    --no-gitconfig --paging=never --side-by-side --line-numbers \
+    --width "${LAZYGIT_COLUMNS:-120}" --tabs 4 \
+    --file-style 'bold' --file-decoration-style 'none' \
+    --hunk-header-file-style 'bold' --hunk-header-line-number-style 'bold' \
+    --line-numbers-left-format '{nm:>4} |' \
+    --line-numbers-right-format '{np:>4} |' \
+    "${theme_options[@]}"

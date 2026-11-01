@@ -2,26 +2,28 @@
 
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
+# Preserve existing files and directories before replacing them with managed links.
+link_config() {
+    local source="$1" destination="$2" backup
+    mkdir -p "$(dirname "$destination")" || return 1
+    if [ -L "$destination" ] && [ "$(readlink "$destination")" = "$source" ]; then
+        return 0
+    fi
+    if [ -e "$destination" ] || [ -L "$destination" ]; then
+        backup="$(mktemp -d "${destination}.backup.XXXXXXXX")" || return 1
+        mv "$destination" "$backup/original" || return 1
+        echo "Preserved $destination in $backup/original"
+    fi
+    ln -s "$source" "$destination"
+}
+
 setup_symlinks() {
-    mkdir -p "$HOME/.config"
-    
-    # Remove existing configs
-    rm -f "$HOME/.zshrc"
-    rm -f "$HOME/.p10k.zsh"
-    rm -f "$HOME/.cl_aliases"
-    rm -f "$HOME/.tmux.conf"
-    rm -rf "$HOME/.config/nvim"
-    
-    # Create symlinks
-    ln -sf "$DOTFILES_DIR/configs/zsh/.zshrc" "$HOME/.zshrc"
-    ln -sf "$DOTFILES_DIR/configs/zsh/.p10k.zsh" "$HOME/.p10k.zsh"
-    ln -sf "$DOTFILES_DIR/configs/zsh/.cl_aliases" "$HOME/.cl_aliases"
-    ln -sf "$DOTFILES_DIR/configs/tmux/.tmux.conf" "$HOME/.tmux.conf"
-    ln -sf "$DOTFILES_DIR/configs/nvim" "$HOME/.config/nvim"
-    
-    # Make sure your .zshrc sources .cl_aliases
-    grep -q "source ~/.cl_aliases" "$HOME/.zshrc" || {
-        echo "# Source custom aliases" >> "$HOME/.zshrc"
-        echo "source ~/.cl_aliases" >> "$HOME/.zshrc"
-    }
+    link_config "$DOTFILES_DIR/configs/zsh/.zshrc" "$HOME/.zshrc"
+    link_config "$DOTFILES_DIR/configs/zsh/.p10k.zsh" "$HOME/.p10k.zsh"
+    link_config "$DOTFILES_DIR/configs/zsh/.cl_aliases" "$HOME/.cl_aliases"
+    link_config "$DOTFILES_DIR/configs/tmux/.tmux.conf" "$HOME/.tmux.conf"
+    link_config "$DOTFILES_DIR/configs/nvim" "$HOME/.config/nvim"
+    link_config "$DOTFILES_DIR/configs/lazygit/config.yml" "$HOME/.config/lazygit/config.yml"
+    link_config "$DOTFILES_DIR/configs/lazygit/dark.yml" "$HOME/.config/lazygit/dark.yml"
+    link_config "$DOTFILES_DIR/bin/lazygit-diff" "$HOME/.local/bin/lazygit-diff"
 }

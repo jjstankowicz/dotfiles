@@ -22,32 +22,21 @@ vim.opt.rtp:prepend(lazypath)
 vim.g.mapleader = " "
 vim.opt.signcolumn = "yes"
 vim.opt.number = true -- absolute line numbers
-vim.opt.relativenumber = true -- optional: relative numbers
+vim.opt.numberwidth = 2
+vim.opt.relativenumber = false
+vim.opt.cursorline = true
+vim.opt.cursorlineopt = "number"
+vim.opt.diffopt:append { "algorithm:histogram", "linematch:60", "context:8" }
+vim.opt.fillchars:remove { "vert", "horiz", "verthoriz" }
+vim.opt.title = true
+vim.opt.titlelen = 0
 
 -- -- -- -- -- -- -- -- --
 -- Plugin specifications
 -- -- -- -- -- -- -- -- --
 
 require("lazy").setup {
-    -- LSP Support
-    {
-        "neovim/nvim-lspconfig",
-        dependencies = {
-            "hrsh7th/cmp-nvim-lsp",
-        },
-    },
-
-    -- Autocompletion
-    {
-        "hrsh7th/nvim-cmp",
-        dependencies = {
-            "L3MON4D3/LuaSnip",
-            "hrsh7th/cmp-buffer",
-            "hrsh7th/cmp-path",
-            "hrsh7th/cmp-cmdline",
-        },
-    },
-
+    require("language_tools").plugins(),
     -- Commenting support
     {
         "numToStr/Comment.nvim",
@@ -65,6 +54,14 @@ require("lazy").setup {
         },
     },
     -- Color schemes
+    {
+        "gmr458/vscode_modern_theme.nvim",
+        main = "vscode_modern",
+        commit = "22371eeb704bed395262e552248c998ef7f41254",
+        lazy = false,
+        priority = 1000,
+        opts = { cursorline = false, transparent_background = false, nvim_tree_darker = false },
+    },
     {
         "sainnhe/everforest",
         lazy = false,
@@ -105,14 +102,6 @@ require("lazy").setup {
         },
     },
 
-    -- Formatting and linting
-    {
-        "nvimtools/none-ls.nvim",
-        dependencies = {
-            "nvim-lua/plenary.nvim",
-        },
-    },
-
     -- Telescope
     {
         "nvim-telescope/telescope.nvim",
@@ -124,21 +113,22 @@ require("lazy").setup {
     {
         "rcarriga/nvim-notify",
         config = function()
-            vim.notify = require "notify"
-        end,
-    },
-
-    -- Mason (add this before the closing bracket)
-    {
-        "williamboman/mason.nvim",
-        dependencies = {
-            "williamboman/mason-lspconfig.nvim",
-        },
-        config = function()
-            require("mason").setup()
-            require("mason-lspconfig").setup {
-                ensure_installed = { "pyright" },
+            local notify = require "notify"
+            local direction = require("notify.stages.util").DIRECTION.BOTTOM_UP
+            local stages = require "notify.stages.fade_in_slide_out"(direction)
+            notify.setup {
+                top_down = false,
+                stages = stages,
+                on_open = function(window)
+                    require("popup_backdrop").prepare(window)
+                    vim.api.nvim_set_option_value(
+                        "winblend",
+                        require("theme").popup_blend,
+                        { win = window, scope = "local" }
+                    )
+                end,
             }
+            vim.notify = notify
         end,
     },
 
@@ -146,11 +136,48 @@ require("lazy").setup {
     {
         "iamcco/markdown-preview.nvim",
         cmd = { "MarkdownPreview", "MarkdownPreviewStop" },
-        build = "cd app && npm install",
+        keys = {
+            { "<leader>mv", "<cmd>MarkdownPreview<CR>", desc = "Open Markdown browser preview" },
+        },
+        build = ":call mkdp#util#install_sync()",
         init = function()
             vim.g.mkdp_filetypes = { "markdown" }
         end,
+        config = function(plugin)
+            require("markdown_source").setup(plugin.dir)
+        end,
         ft = { "markdown" },
+    },
+
+    -- Markdown rendering in the editor buffer
+    {
+        "MeanderingProgrammer/render-markdown.nvim",
+        tag = "v8.14.0",
+        ft = { "markdown" },
+        dependencies = { "nvim-treesitter/nvim-treesitter", "nvim-tree/nvim-web-devicons" },
+        keys = {
+            { "<leader>mr", "<cmd>RenderMarkdown buf_toggle<CR>", desc = "Toggle Markdown rendering" },
+        },
+        opts = {
+            heading = {
+                sign = false,
+                icons = { "#", "##", "###", "####", "#####", "######" },
+                width = "block",
+            },
+            code = { sign = false, width = "block" },
+            custom_handlers = { latex = { parse = require("markdown_math").parse } },
+            latex = {
+                enabled = true,
+                converter = {
+                    vim.fn.expand "~/.local/bin/utftex",
+                    vim.fn.expand "~/.local/bin/termtex",
+                    "utftex",
+                    "termtex",
+                },
+                inline = true,
+                block = true,
+            },
+        },
     },
 
     -- Clipboard support over SSH
@@ -165,21 +192,9 @@ require("lazy").setup {
         end,
     },
 
-    -- Indent Blankline
-    {
-        "lukas-reineke/indent-blankline.nvim",
-        main = "ibl", -- For version 3, specify the main module as "ibl"
-        config = function()
-            require("ibl").setup {
-                indent = { char = "┊" }, -- Customize the character
-                scope = {
-                    enabled = true, -- Enable context highlighting
-                    show_start = true, -- Highlight the start of the scope
-                    show_end = false, -- Optionally highlight the end of the scope
-                },
-            }
-        end,
-    },
+    require("reading").plugins(),
+    -- Open file buffers
+    require("buffers").plugin(),
     -- Statusline + icons (GUI/TUI feel)
     {
         "nvim-lualine/lualine.nvim",
@@ -187,7 +202,10 @@ require("lazy").setup {
         config = function()
             require("lualine").setup {
                 options = {
-                    theme = "auto",
+                    theme = function()
+                        return require("theme").statusline()
+                    end,
+                    globalstatus = true,
                     icons_enabled = true,
                     component_separators = { left = "", right = "" },
                     section_separators = { left = "", right = "" },
@@ -204,6 +222,23 @@ require("lazy").setup {
         end,
     },
     {
+        "folke/which-key.nvim",
+        tag = "v3.17.0",
+        event = "VeryLazy",
+        opts = {
+            delay = 250,
+            preset = "modern",
+            win = { border = "rounded" },
+            spec = {
+                { "<leader>b", group = "Buffers" },
+                { "<leader>f", group = "Find" },
+                { "<leader>g", group = "Git" },
+                { "<leader>m", group = "Markdown" },
+                { "<leader>w", group = "Panes" },
+            },
+        },
+    },
+    {
         "folke/noice.nvim",
         event = "VeryLazy",
         dependencies = {
@@ -211,6 +246,8 @@ require("lazy").setup {
             "rcarriga/nvim-notify",
         },
         config = function()
+            -- A painted cursor can remain opaque inside a transparent popup.
+            require("noice.ui.cmdline").real_cursor = false
             require("noice").setup {
                 presets = {
                     command_palette = false, -- turn this OFF so it stops overriding position
@@ -218,6 +255,7 @@ require("lazy").setup {
                 },
                 views = {
                     cmdline_popup = {
+                        win_options = { winblend = require("theme").popup_blend },
                         position = {
                             row = "50%", -- move it vertically (0% = top, 100% = bottom)
                             col = "50%", -- usually leave centered horizontally
@@ -236,10 +274,12 @@ require("lazy").setup {
                             max_height = 30,
                         },
                         win_options = {
+                            winblend = require("theme").popup_blend,
                             winhighlight = "Normal:NormalFloat,FloatBorder:FloatBorder",
                         },
                         backend = "popup",
                     },
+                    mini = { win_options = { winblend = require("theme").popup_blend } },
                 },
             }
         end,
@@ -252,196 +292,15 @@ require("lazy").setup {
             require("fidget").setup {}
         end,
     },
-    -- File Explorer
-    {
-        "nvim-tree/nvim-tree.lua",
-        dependencies = { "nvim-tree/nvim-web-devicons" },
-        config = function()
-            require("nvim-tree").setup {
-                filters = { dotfiles = true },
-                view = { width = 30, side = "left" },
-                git = { enable = true },
-            }
-
-            -- <leader>x to toggle the file tree
-            vim.keymap.set("n", "<leader>x", "<cmd>NvimTreeToggle<CR>", { noremap = true, silent = true })
-        end,
-    },
-    -- Floating terminal
-    {
-        "akinsho/toggleterm.nvim",
-        version = "*",
-        config = function()
-            require("toggleterm").setup {
-                size = function(term)
-                    if term.direction == "horizontal" then
-                        return 15
-                    elseif term.direction == "vertical" then
-                        return vim.o.columns * 0.4
-                    end
-                end,
-                open_mapping = [[<c-\>]],
-                direction = "horizontal",
-                float_opts = { border = "single" },
-            }
-        end,
-    },
-    {
-        "lewis6991/gitsigns.nvim",
-        config = function()
-            require("gitsigns").setup()
-        end,
-    },
-    {
-        "tpope/vim-fugitive",
-    },
+    require("workspace").plugins(),
+    require("git_review").plugins(),
 }
 
--- Autocompletion setup
-local cmp = require "cmp"
-local luasnip = require "luasnip"
-
-cmp.setup {
-    snippet = {
-        expand = function(args)
-            luasnip.lsp_expand(args.body)
-        end,
-    },
-    mapping = cmp.mapping.preset.insert {
-        ["<C-b>"] = cmp.mapping.scroll_docs(-4),
-        ["<C-f>"] = cmp.mapping.scroll_docs(4),
-        ["<C-Space>"] = cmp.mapping.complete(),
-        ["<C-e>"] = cmp.mapping.abort(),
-        ["<CR>"] = cmp.mapping.confirm { select = true },
-        ["<C-Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-                cmp.select_next_item()
-            elseif luasnip.expand_or_jumpable() then
-                luasnip.expand_or_jump()
-            else
-                fallback()
-            end
-        end, { "i", "s" }),
-        ["<C-S-Tab>"] = cmp.mapping(function(fallback)
-            if cmp.visible() then
-                cmp.select_prev_item()
-            elseif luasnip.jumpable(-1) then
-                luasnip.jump(-1)
-            else
-                fallback()
-            end
-        end, { "i", "s" }),
-    },
-    sources = cmp.config.sources({
-        { name = "nvim_lsp" },
-        { name = "luasnip" },
-    }, {
-        { name = "buffer" },
-        { name = "path" },
-    }),
-}
-
--- LSP + Linting Setup
-vim.diagnostic.config {
-    virtual_text = { -- Keep diagnostics visible inline
-        spacing = 4,
-        source = "always", -- Show where the diagnostic comes from (LSP/null-ls)
-    },
-    signs = true, -- Show diagnostic signs in the sign column
-    underline = true, -- Underline problematic code
-    update_in_insert = false, -- Don't show diagnostics while typing
-    severity_sort = true, -- Sort diagnostics by severity
-    float = { border = "rounded", source = "always" }, -- Show source in hover
-}
-
--- LSP capabilities for completion, applied to all servers
-local capabilities = require("cmp_nvim_lsp").default_capabilities()
-
-vim.lsp.config("*", {
-    capabilities = capabilities,
-})
-
--- Pyright configuration using the new vim.lsp.config API
-vim.lsp.config("pyright", {
-    settings = {
-        python = {
-            analysis = {
-                typeCheckingMode = "basic",
-                diagnosticMode = "workspace",
-                diagnosticSeverityOverrides = {
-                    reportGeneralTypeIssues = "error",
-                    reportShadowedImports = "error",
-                },
-            },
-        },
-    },
-    root_dir = function(fname)
-        local util = require "lspconfig.util"
-        return util.find_git_ancestor(fname) or util.path.dirname(fname)
-    end,
-    before_init = function(_, config)
-        config.init_options = {
-            maxProjectFiles = 10000,
-            maxListeners = 20,
-        }
-    end,
-})
-
--- Enable Pyright (auto-start based on filetype/root)
-vim.lsp.enable "pyright"
-
--- Rust Analyzer (same API as pyright)
-vim.lsp.config("rust_analyzer", {
-    capabilities = capabilities,
-})
-vim.lsp.enable "rust_analyzer"
-
--- Setup null-ls
-local null_ls = require "null-ls"
-local augroup = vim.api.nvim_create_augroup("LspFormatting", {}) -- Add this line
-null_ls.setup {
-    sources = {
-        null_ls.builtins.diagnostics.pylint,
-        -- null_ls.builtins.diagnostics.ruff.with({
-        --     extra_args = { "--max-line-length", "100" },
-        -- }),
-        null_ls.builtins.formatting.black.with {
-            extra_args = { "--line-length", "100" },
-        },
-        null_ls.builtins.formatting.stylua.with {
-            extra_args = { "--config-path", vim.fn.expand "~/.config/nvim/stylua.toml" },
-        },
-    },
-    on_attach = function(client, bufnr)
-        -- Enable formatting on save
-        if client.supports_method "textDocument/formatting" then
-            vim.api.nvim_clear_autocmds { group = augroup, buffer = bufnr }
-            vim.api.nvim_create_autocmd("BufWritePre", {
-                group = augroup,
-                buffer = bufnr,
-                callback = function()
-                    vim.lsp.buf.format {
-                        bufnr = bufnr,
-                        timeout_ms = 5000,
-                    }
-                end,
-            })
-        end
-    end,
-}
+require("language_tools").setup()
 
 -- -- -- -- --
 -- KEYBINDINGS
 -- -- -- -- --
-
--- LSP keymaps
-vim.keymap.set("n", "gd", vim.lsp.buf.definition)
-vim.keymap.set("n", "K", vim.lsp.buf.hover)
-
--- Hover keymaps
-vim.keymap.set("n", "<leader>e", function()
-    vim.diagnostic.open_float(nil, { focusable = true, scope = "cursor" })
-end, { noremap = true, silent = true })
 
 -- Telescope keymaps
 require("telescope").setup {
@@ -472,15 +331,20 @@ require("telescope").setup {
         },
     },
 }
-vim.keymap.set("n", "<leader>fs", require("telescope.builtin").lsp_document_symbols)
-vim.keymap.set("n", "<leader>fd", require("telescope.builtin").lsp_definitions)
-vim.keymap.set("n", "<leader>fr", require("telescope.builtin").lsp_references)
-vim.keymap.set("n", "<leader>fi", require("telescope.builtin").lsp_implementations)
-vim.keymap.set("n", "gs", vim.lsp.buf.signature_help) -- Quick signature view without Telescope
-vim.keymap.set("n", "<leader>ff", require("telescope.builtin").find_files)
-vim.keymap.set("n", "<leader>fg", require("telescope.builtin").live_grep)
-vim.keymap.set("n", "<leader>fb", require("telescope.builtin").buffers)
-vim.keymap.set("n", "<leader>fh", require("telescope.builtin").help_tags)
+vim.keymap.set("n", "<leader>fs", require("telescope.builtin").lsp_document_symbols, { desc = "Find document symbols" })
+vim.keymap.set("n", "<leader>fd", require("telescope.builtin").lsp_definitions, { desc = "Find definitions" })
+vim.keymap.set("n", "<leader>fr", require("telescope.builtin").lsp_references, { desc = "Find references" })
+vim.keymap.set("n", "<leader>fi", require("telescope.builtin").lsp_implementations, { desc = "Find implementations" })
+vim.keymap.set("n", "<leader>ff", require("telescope.builtin").find_files, { desc = "Find files" })
+vim.keymap.set("n", "<leader>fg", require("telescope.builtin").live_grep, { desc = "Search project text" })
+vim.keymap.set("n", "<leader>fb", require("telescope.builtin").buffers, { desc = "Find open buffers" })
+vim.keymap.set("n", "<leader>fh", require("telescope.builtin").help_tags, { desc = "Find help" })
+
+-- Word and paragraph navigation
+vim.keymap.set({ "n", "x" }, "<leader><Left>", "ge", { desc = "Previous word end" })
+vim.keymap.set({ "n", "x" }, "<leader><Right>", "e", { desc = "Next word end" })
+vim.keymap.set({ "n", "x" }, "<leader><Up>", "{", { desc = "Previous blank line" })
+vim.keymap.set({ "n", "x" }, "<leader><Down>", "}", { desc = "Next blank line" })
 
 -- Comment keymaps
 vim.keymap.set("n", "<C-_>", function()
@@ -530,24 +394,9 @@ else
 end
 
 -- Block select
-vim.keymap.set("n", "<leader>v", "<C-Q>", { noremap = true })
+vim.keymap.set("n", "<leader>v", "<C-Q>", { noremap = true, desc = "Select block" })
 
--- -- -- -- -- --
--- CONFIGURATION
--- -- -- -- -- --
-
--- Format on save for Python files
-vim.api.nvim_create_autocmd("BufWritePre", {
-    pattern = "*.py",
-    callback = function()
-        vim.lsp.buf.format { async = false }
-    end,
-})
-
--- Set colorscheme
-vim.opt.termguicolors = true
-vim.o.background = "dark"
-vim.cmd.colorscheme "tokyonight-night"
-
-vim.api.nvim_set_hl(0, "NormalFloat", { bg = "none" })
-vim.opt.winblend = 10
+require("git_review").setup()
+require("theme").setup()
+require("popup_backdrop").setup()
+require("workspace").setup()

@@ -1,0 +1,10 @@
+gui:
+  theme:
+    activeBorderColor: ['#0078d4', bold]
+    inactiveBorderColor: ['#515151']
+    searchingActiveBorderColor: ['#0078d4', bold]
+    optionsTextColor: ['#b0b0b0']
+    selectedLineBgColor: ['#264f78']
+    inactiveViewSelectedLineBgColor: ['#242424']
+    unstagedChangesColor: ['#e2c08d']
+    defaultFgColor: ['#cccccc']

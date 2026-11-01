@@ -1,0 +1,21 @@
+gui:
+  sidePanelWidth: 0.22
+  border: rounded
+  showCommandLog: false
+  showRandomTip: false
+  showNumstatInFilesView: true
+  theme:
+    activeBorderColor: ['#005fb8', bold]
+    inactiveBorderColor: ['#b8b8b8']
+    searchingActiveBorderColor: ['#005fb8', bold]
+    optionsTextColor: ['#616161']
+    selectedLineBgColor: ['#cce5ff']
+    inactiveViewSelectedLineBgColor: ['#ebebeb']
+    unstagedChangesColor: ['#895503']
+    defaultFgColor: ['#3b3b3b']
+git:
+  diffContextSize: 8
+  pagers:
+    - colorArg: never
+      pager: lazygit-diff
+    - colorArg: always

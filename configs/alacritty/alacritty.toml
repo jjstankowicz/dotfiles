@@ -1,0 +1,32 @@
+# Windows terminal settings based on the local WezTerm configuration.
+[general]
+import = ["onehalf-light.toml"]
+
+[terminal.shell]
+program = "wsl.exe"
+args = ["--distribution", "Ubuntu", "--cd", "~"]
+
+[font]
+normal = { family = "CaskaydiaCove NF", style = "Regular" }
+size = 16.0
+offset = { x = 0, y = 2 }
+
+[window]
+dynamic_title = true
+padding = { x = 4, y = 2 }
+startup_mode = "Maximized"
+opacity = 1.0
+
+[scrolling]
+history = 5000
+
+[bell]
+duration = 0
+
+[keyboard]
+bindings = [
+    { key = "C", mods = "Control", action = "Copy" },
+    { key = "V", mods = "Control", action = "Paste" },
+    { key = "Enter", mods = "Alt", action = "ToggleFullscreen" },
+    { key = "T", mods = "Control|Shift", action = "CreateNewWindow" },
+]

@@ -1,57 +1,3 @@
-# SSH Agent Management
-# ssh_agent_start() {
-#     # Don't run if we're in an SSH session
-#     if [[ -n "$SSH_CLIENT" ]] || [[ -n "$SSH_TTY" ]]; then
-#         return
-#     fi
-#
-#     # Path to store the agent environment variables
-#     local agent_env="$HOME/.ssh/agent.env"
-#
-#     # Source the stored agent environment if it exists
-#     if [ -f "$agent_env" ]; then
-#         source "$agent_env" >/dev/null
-#     fi
-#
-#     # Check if agent is still running
-#     if ! kill -0 $SSH_AGENT_PID >/dev/null 2>&1; then
-#         # Start new agent
-#         mkdir -p "$(dirname "$agent_env")"
-#         ssh-agent > "$agent_env"
-#         source "$agent_env" >/dev/null
-#     fi
-#
-#     # Load keys if agent has none
-#     ssh-add -l >/dev/null 2>&1 || ssh-add
-# }
-
-# # Debug function with more verbose output
-# ssh_agent_debug() {
-#     local agent_env="$HOME/.ssh/agent.env"
-#     echo "Current SSH_AUTH_SOCK: $SSH_AUTH_SOCK"
-#     echo "Current SSH_AGENT_PID: $SSH_AGENT_PID"
-#     
-#     if [ -f "$agent_env" ]; then
-#         echo "Agent environment file exists"
-#         cat "$agent_env"
-#     else
-#         echo "No agent environment file found"
-#     fi
-#     
-#     echo "Checking for running agents:"
-#     pgrep -l ssh-agent
-#     
-#     echo "Loaded keys:"
-#     ssh-add -l || echo "No keys loaded"
-# }
-
-# Alias for debugging
-# alias fixssh='ssh_agent_debug'
-
-# Start the agent
-# ssh_agent_start
-
-
 # Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
 # Initialization code that may require console input (password prompts, [y/n]
 # confirmations, etc.) must go above this block; everything else may go below.
@@ -90,6 +36,7 @@ alias alert='notify-send --urgency=low -i "$(test $? -eq 0 && echo terminal || e
 # Use control keys to move forward and back in words
 bindkey '^[[5C' forward-word
 bindkey '^[[5D' backward-word
+bindkey '^U' backward-kill-line
 
 # Path to nvim
 export PATH="$PATH:/opt/nvim-linux64/bin"
@@ -133,96 +80,10 @@ fi
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
 
-### Code dump for LLM help
-
-codetree() {
-  local src_dir="."
-  local outfile="CODETREE.txt"
-  local omit_patterns=()
-
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      --source|-s) src_dir="$2"; shift 2 ;;
-      --output|-o) outfile="$2"; shift 2 ;;
-      --omit) omit_patterns+=("$2"); shift 2 ;;
-      *) shift ;;
-    esac
-  done
-
-  {
-    echo "=== GIT FILES ==="
-    git -C "$src_dir" ls-files
-
-    echo
-    echo "=== TREE VIEW (git-tracked only) ==="
-    (
-      cd "$src_dir" || exit 1
-      git ls-files | sed 's|^|./|' | tree --fromfile .
-    )
-
-    echo
-    echo "=== FILE CONTENTS ==="
-
-    git -C "$src_dir" ls-files | while read -r file; do
-      local skip=false
-      for pattern in "${omit_patterns[@]}"; do
-        [[ "$file" == *"$pattern"* ]] && skip=true && break
-      done
-      $skip && continue
-
-      echo "----- FILE START: $file -----"
-      cat "$src_dir/$file"
-      echo
-      echo "----- FILE END: $file -----"
-      echo
-    done
-  } > "$outfile"
-}
-
-
-codeextract() {
-  local src_dir="."
-  local output_dir="code_extract"
-  local omit_patterns=()
-
-  while [[ $# -gt 0 ]]; do
-    case $1 in
-      --source|-s) src_dir="$2"; shift 2 ;;
-      --output|-o) output_dir="$2"; shift 2 ;;
-      --omit) omit_patterns+=("$2"); shift 2 ;;
-      *) shift ;;
-    esac
-  done
-
-  mkdir -p "$output_dir"
-
-  # Copy actual file contents into flattened filenames
-  git -C "$src_dir" ls-files | while read -r file; do
-    local skip=false
-    for pattern in "${omit_patterns[@]}"; do
-      [[ "$file" == *"$pattern"* ]] && skip=true && break
-    done
-    $skip && continue
-
-    local flat_name="${file//\//-SLASH-}"
-    cp "$src_dir/$file" "$output_dir/$flat_name"
-  done
-
-  # Add GIT.txt
-  git -C "$src_dir" ls-files > "$output_dir/GIT.txt"
-
-  # Add TREE.txt based on git files
-  (
-    cd "$src_dir" || exit 1
-    git ls-files | sed 's|^|./|' | tree --fromfile .
-  ) > "$output_dir/TREE.txt"
-}
-
-
 export PYTHONBREAKPOINT=ipdb.set_trace
 
-git config --global user.name "JJ Stankowicz"
-git config --global user.email "jj.stankowicz@gmail.com"
+git config --global user.name "James Stankowicz"
+git config --global user.email "james.stankowicz@lumagroup.com"
 
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
@@ -230,10 +91,5 @@ export NVM_DIR="$HOME/.nvm"
 
 export PATH="/snap/bin:$PATH"
 
-# . "$HOME/.local/bin/env"
-echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> ~/.zshrc
-
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
+export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
