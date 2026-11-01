@@ -1,8 +1,9 @@
 # Dotfiles
 
 This repository contains the WSL shell and Neovim setup, Lazygit configuration,
-and snapshots of the Windows terminal settings. Local editor binaries live in
-`~/.local/bin`; put that directory before system binaries in `PATH`.
+global Codex instructions, and snapshots of the Windows terminal settings. Local
+editor binaries live in `~/.local/bin`; put that directory before system binaries
+in `PATH`.
 
 ## Restore on another machine
 
@@ -68,6 +69,39 @@ Before moving machines, commit and push the intended checkout changes and verify
 them from the remote. An untracked README, Lua module, terminal palette, or wrapper
 will not appear in a fresh clone. Preserve `lazy-lock.json` with the configuration;
 it pins plugins, not every external dependency or build artifact.
+
+## Global Codex instructions
+
+`configs/codex/AGENTS.md` contains the portable preferences and shared workflow
+rules. Project paths and any future CPU/hardware-specific notes belong in
+`configs/codex/machine-context.md`, which the global instructions reference.
+Review that file's original WSL/Windows paths when restoring on another machine.
+Project workflow rules remain in each project's own `AGENTS.md`.
+
+The installer copies these files and the two referenced runbooks into
+`${CODEX_HOME:-$HOME/.codex}`. This follows Codex's documented
+[global instructions location](https://learn.chatgpt.com/docs/agent-configuration/agents-md).
+It uses regular files so a Windows Codex home on `/mnt/c` can read them without
+following WSL symlinks. Existing differing files or links receive adjacent
+`*.backup.XXXXXXXX/original` backups; identical regular files are left alone.
+Other Codex configuration, credentials, and skills are left in place.
+
+To install only the Codex documents, without package or editor downloads:
+
+```bash
+bash <<'SH'
+set -e
+source lib/config.sh
+setup_codex_config
+SH
+```
+
+`setup_symlinks` and the full installer also call `setup_codex_config`. If Windows
+and WSL use separate Codex homes, run this once for each home by setting
+`CODEX_HOME` for that invocation; unset it to target the Linux `~/.codex` default.
+Edit the tracked files in `configs/codex/` and rerun this step to deploy changes.
+Start a new Codex session to pick up the installed instructions. An existing
+`AGENTS.override.md` takes precedence over `AGENTS.md` and is left untouched.
 
 ## Editor installation
 
@@ -254,8 +288,9 @@ bash -n bin/install.sh lib/config.sh lib/tools.sh
 ```
 
 Installer checks run against a temporary `HOME` and preserve existing configuration
-files, directories, and broken links. They also check repeated installation and
-acceptance or rejection of download checksums, without network access:
+files, directories, and broken links. They also check Codex document copies,
+backups and repeated installation in default and custom Codex homes, and acceptance
+or rejection of download checksums, without network access:
 
 ```bash
 bash tests/installer.sh

@@ -10,7 +10,7 @@ fi
 
 scratch_dir="$(mktemp -d)"
 trap 'rm -rf "$scratch_dir"' EXIT
-env HOME="$scratch_dir" bash -s -- "$repository_dir" "$scratch_dir" "$@" <<'CHECKS'
+env -u CODEX_HOME HOME="$scratch_dir" bash -s -- "$repository_dir" "$scratch_dir" "$@" <<'CHECKS'
 set -euo pipefail
 repository_dir="$1"
 scratch_dir="$2"
@@ -18,6 +18,11 @@ shift 2
 source "$repository_dir/lib/config.sh"
 source "$repository_dir/lib/tools.sh"
 mkdir -p "$HOME/.config/nvim" "$HOME/.config/lazygit"
+mkdir -p "$HOME/.codex/runbooks"
+printf original-instructions > "$HOME/.codex/AGENTS.md"
+printf original-machine > "$HOME/.codex/machine-context.md"
+printf original-runbook > "$HOME/.codex/runbooks/copilot-review.md"
+printf untouched > "$HOME/.codex/config.toml"
 printf original > "$HOME/.config/nvim/user.lua"
 printf original > "$HOME/.config/lazygit/config.yml"
 ln -s "$scratch_dir/missing-config" "$HOME/.config/lazygit/dark.yml"
@@ -28,6 +33,14 @@ setup_symlinks
 [[ $(readlink "$HOME/.config/lazygit/config.yml") == "$repository_dir/configs/lazygit/config.yml" ]]
 [[ $(readlink "$HOME/.config/lazygit/dark.yml") == "$repository_dir/configs/lazygit/dark.yml" ]]
 [[ $(readlink "$HOME/.local/bin/lazygit-diff") == "$repository_dir/bin/lazygit-diff" ]]
+for path in AGENTS.md machine-context.md runbooks/copilot-review.md runbooks/planning-cookbook.md; do
+    [[ -f "$HOME/.codex/$path" && ! -L "$HOME/.codex/$path" ]]
+    cmp "$repository_dir/configs/codex/$path" "$HOME/.codex/$path"
+done
+[[ $(cat "$HOME"/.codex/AGENTS.md.backup.*/original) == original-instructions ]]
+[[ $(cat "$HOME"/.codex/machine-context.md.backup.*/original) == original-machine ]]
+[[ $(cat "$HOME"/.codex/runbooks/copilot-review.md.backup.*/original) == original-runbook ]]
+[[ $(cat "$HOME/.codex/config.toml") == untouched ]]
 [[ $(cat "$HOME"/.config/nvim.backup.*/original/user.lua) == original ]]
 [[ $(cat "$HOME"/.config/lazygit/config.yml.backup.*/original) == original ]]
 broken_link_backup="$(find "$HOME/.config/lazygit" -path '*dark.yml.backup.*/original')"
@@ -37,6 +50,28 @@ broken_link_backup="$(find "$HOME/.config/lazygit" -path '*dark.yml.backup.*/ori
 backup_count="$(find "$HOME" -name '*.backup.*' | wc -l)"
 setup_symlinks
 [[ $(find "$HOME" -name '*.backup.*' | wc -l) == "$backup_count" ]]
+
+# A custom Codex home must not redirect installation into the default home.
+export CODEX_HOME="$HOME/custom codex home"
+mkdir -p "$CODEX_HOME"
+printf custom-instructions > "$HOME/custom-instructions.md"
+ln -s "$HOME/custom-instructions.md" "$CODEX_HOME/AGENTS.md"
+printf override-instructions > "$CODEX_HOME/AGENTS.override.md"
+setup_codex_config
+for path in AGENTS.md machine-context.md runbooks/copilot-review.md runbooks/planning-cookbook.md; do
+    [[ -f "$CODEX_HOME/$path" && ! -L "$CODEX_HOME/$path" ]]
+    cmp "$repository_dir/configs/codex/$path" "$CODEX_HOME/$path"
+done
+[[ $(cat "$CODEX_HOME"/AGENTS.md.backup.*/original) == custom-instructions ]]
+custom_link_backup="$(find "$CODEX_HOME" -path '*/AGENTS.md.backup.*/original')"
+[[ -L "$custom_link_backup" ]]
+[[ $(cat "$HOME/custom-instructions.md") == custom-instructions ]]
+[[ $(cat "$CODEX_HOME/AGENTS.override.md") == override-instructions ]]
+[[ $(cat "$HOME"/.codex/AGENTS.md.backup.*/original) == original-instructions ]]
+backup_count="$(find "$HOME" -name '*.backup.*' | wc -l)"
+setup_codex_config
+[[ $(find "$HOME" -name '*.backup.*' | wc -l) == "$backup_count" ]]
+unset CODEX_HOME
 
 printf test > "$scratch_dir/download.txt"
 checksum="$(sha256sum "$scratch_dir/download.txt" | cut -d ' ' -f 1)"
