@@ -59,7 +59,7 @@ vim.defer_fn(function() vim.cmd('MarkdownPreview') end, 500)
     const original = evaluate('return vim.api.nvim_buf_get_lines(0, 0, -1, false)')
     const paneQuery = 'return require("framed_layout").panes()'
     const windows = evaluate(paneQuery)
-    assert.equal(windows.length, 3, 'Expected the configured three-pane layout')
+    assert.equal(windows.length, 5, 'Expected the configured five-pane layout')
     const editor = evaluate('return vim.api.nvim_get_current_win()')
     for (const line of [4, 7, 9, 13, 0]) {
       evaluate(`vim.api.nvim_set_current_win(${windows.find(window => window !== editor)}); return true`)
