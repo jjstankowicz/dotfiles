@@ -10,7 +10,8 @@ fi
 
 scratch_dir="$(mktemp -d)"
 trap 'rm -rf "$scratch_dir"' EXIT
-env -u CODEX_HOME HOME="$scratch_dir" bash -s -- "$repository_dir" "$scratch_dir" "$@" <<'CHECKS'
+env -u CODEX_HOME -u XDG_CONFIG_HOME -u XDG_DATA_HOME -u XDG_STATE_HOME -u XDG_CACHE_HOME \
+    -u NVIM_APPNAME HOME="$scratch_dir" bash -s -- "$repository_dir" "$scratch_dir" "$@" <<'CHECKS'
 set -euo pipefail
 repository_dir="$1"
 scratch_dir="$2"
@@ -84,6 +85,13 @@ fi
 
 if [[ ${1:-} == --download ]]; then
     export PATH="$HOME/.local/bin:$PATH"
+    install_node
+    node --version
+    npm --version
+    install_node
+    install_lazygit
+    lazygit --version | grep -q 'version=0.56.0,'
+    install_lazygit
     install_neovim
     installed_version="$(nvim --version | sed -n '1s/^NVIM v\([0-9]*\.[0-9]*\.[0-9]*\)$/\1/p')"
     [[ -n "$installed_version" ]]
@@ -102,6 +110,41 @@ if [[ ${1:-} == --download ]]; then
     install_termtex
     "$HOME/.local/bin/termtex" '\xrightarrow{label}' | grep -q label
     install_termtex
+    lock_checksum="$(sha256sum "$repository_dir/configs/nvim/lazy-lock.json")"
+    restore_neovim_plugins
+    # Exercise updating an existing checkout as well as repeat installation.
+    git -C "$HOME/.local/share/nvim/lazy/cmp-buffer" checkout --detach HEAD^
+    restore_neovim_plugins
+    [[ $(sha256sum "$repository_dir/configs/nvim/lazy-lock.json") == "$lock_checksum" ]]
+    mkdir -p "$scratch_dir/startup/nvim"
+    cp -a "$repository_dir/configs/nvim/." "$scratch_dir/startup/nvim/"
+    cp -a "$repository_dir/configs/lazygit" "$scratch_dir/startup/lazygit"
+    git -C "$scratch_dir/startup" init -q
+    for check in workspace-integration theme-integration math-integration; do
+        (
+            cd "$scratch_dir/startup"
+            XDG_CONFIG_HOME="$scratch_dir/startup" nvim --headless -n \
+                -c "luafile $repository_dir/configs/nvim/tests/$check.lua"
+        )
+    done
+
+    # Daily Markdown usage patches tracked plugin files; a rerun must preserve it.
+    preview_dir="$HOME/.local/share/nvim/lazy/markdown-preview.nvim/app"
+    grep -q 'BEGIN markdown-source bridge' "$preview_dir/server.js"
+    bridge_checksum="$(sha256sum "$preview_dir/server.js")"
+    restore_neovim_plugins
+    [[ $(sha256sum "$preview_dir/server.js") == "$bridge_checksum" ]]
+
+    # The upstream downloader can return success without producing a binary.
+    mkdir -p "$HOME/blocked-downloads"
+    printf '#!/bin/sh\nexit 7\n' > "$HOME/blocked-downloads/curl"
+    chmod +x "$HOME/blocked-downloads/curl"
+    rm "$preview_dir/bin/markdown-preview-linux"
+    if PATH="$HOME/blocked-downloads:$PATH" restore_neovim_plugins; then
+        echo 'Expected missing preview binary to fail installation' >&2
+        exit 1
+    fi
+    [[ $(sha256sum "$repository_dir/configs/nvim/lazy-lock.json") == "$lock_checksum" ]]
 fi
 
 printf 'Installer smoke checks passed\n'

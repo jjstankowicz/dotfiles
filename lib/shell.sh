@@ -3,33 +3,37 @@
 setup_shell() {
     echo "Setting up Oh My Zsh..."
     
-    # Remove existing Oh My Zsh if it exists
-    if [ -d "$HOME/.oh-my-zsh" ]; then
-        rm -rf "$HOME/.oh-my-zsh"
+    # Clone the framework without running its installer or changing the login shell.
+    if [ ! -f "$HOME/.oh-my-zsh/oh-my-zsh.sh" ]; then
+        if [ -e "$HOME/.oh-my-zsh" ] || [ -L "$HOME/.oh-my-zsh" ]; then
+            echo 'Existing ~/.oh-my-zsh is incomplete; inspect it before retrying.' >&2
+            return 1
+        fi
+        git clone --depth=1 https://github.com/ohmyzsh/ohmyzsh.git "$HOME/.oh-my-zsh" || return 1
     fi
-    
-    # Install Oh My Zsh
-    sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)" "" --unattended
+    local custom_dir="${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}"
+    mkdir -p "$custom_dir/plugins" "$custom_dir/themes" "$HOME/.myrm" || return 1
     
     # Install plugins
     echo "Installing Oh My Zsh plugins..."
     
     # zsh-autosuggestions
-    git clone https://github.com/zsh-users/zsh-autosuggestions \
-        ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-autosuggestions
+    if [ ! -d "$custom_dir/plugins/zsh-autosuggestions" ]; then
+        git clone --depth=1 https://github.com/zsh-users/zsh-autosuggestions \
+            "$custom_dir/plugins/zsh-autosuggestions" || return 1
+    fi
     
     # zsh-syntax-highlighting
-    git clone https://github.com/zsh-users/zsh-syntax-highlighting \
-        ${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/zsh-syntax-highlighting
+    if [ ! -d "$custom_dir/plugins/zsh-syntax-highlighting" ]; then
+        git clone --depth=1 https://github.com/zsh-users/zsh-syntax-highlighting \
+            "$custom_dir/plugins/zsh-syntax-highlighting" || return 1
+    fi
     
     # Install powerlevel10k theme
     echo "Installing powerlevel10k theme..."
-    git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
-        ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k
-    
-    # Change default shell to zsh
-    if [ "$SHELL" != "$(which zsh)" ]; then
-        sudo chsh -s $(which zsh) $USER
+    if [ ! -d "$custom_dir/themes/powerlevel10k" ]; then
+        git clone --depth=1 https://github.com/romkatv/powerlevel10k.git \
+            "$custom_dir/themes/powerlevel10k" || return 1
     fi
 }
 
@@ -39,7 +43,7 @@ verify_shell_setup() {
     
     # Verify plugins
     for plugin in "zsh-autosuggestions" "zsh-syntax-highlighting"; do
-        if [ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/plugins/$plugin" ]; then
+        if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/$plugin" ]; then
             echo "Warning: Plugin $plugin not installed properly"
             errors=$((errors + 1))
         else
@@ -48,7 +52,7 @@ verify_shell_setup() {
     done
     
     # Verify theme
-    if [ ! -d "${ZSH_CUSTOM:-~/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
+    if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/themes/powerlevel10k" ]; then
         echo "Warning: powerlevel10k theme not installed properly"
         errors=$((errors + 1))
     else

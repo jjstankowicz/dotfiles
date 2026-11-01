@@ -12,39 +12,34 @@ settings are restored separately. This repository is configuration, not a machin
 backup: credentials, SSH keys, Git authentication, project files, installed plugins,
 language servers, fonts, and local binaries are not included.
 
-1. Clone `https://github.com/jjstankowicz/dotfiles.git` into a permanent directory
-   such as `~/projects/dotfiles`, then enter it. Configuration links point into this
-   checkout, so keep it at that location after installation.
-2. Install prerequisites with the distribution's package manager: Git, curl, CA
-   certificates, tar, gzip, unzip, GCC, Make, zsh, tmux, ripgrep, fzf, and Node.js
-   with npm. Install Lazygit separately if the distribution does not package it.
-   On Debian/Ubuntu, GCC and Make are supplied by `build-essential`.
-3. Put `~/.local/bin` first in `PATH` in the current shell **before** running the
-   editor installation below. Otherwise an older system Neovim can still win.
-4. Run the editor installation below. It downloads tools and builds the math
-   converters, but does not install the shell framework or change the login shell.
-5. For the managed zsh configuration, install Oh My Zsh, its
-   `zsh-autosuggestions` and `zsh-syntax-highlighting` plugins, and the
-   `powerlevel10k` theme under `~/.oh-my-zsh/custom`. Start zsh only after these
-   exist. The `rm` alias moves files to `~/.myrm`; create that directory first.
-6. Start Neovim and run `:Lazy restore` to restore the committed plugin versions.
-   Plugin downloads/builds need network access. Run `:Mason` to inspect Pyright
-   installation, and `:checkhealth` for missing tools. Python/Rust tooling and
-   formatters such as Black, Pylint, Stylua, and rust-analyzer are separate installs.
-7. On Windows, install a configured Nerd Font (CaskaydiaCove NF), restore the
-   terminal files below, and check that the WSL distribution is named `Ubuntu`.
-   Other distribution names require edits to terminal startup settings.
-8. Restore credentials separately through a secure channel. `~/.keys` is optional
-   and sourced by interactive zsh; never add it or SSH private keys to this repo.
-   Reauthenticate GitHub/Copilot and other services as needed.
+1. Clone this repository into a permanent directory such as `~/projects/dotfiles`.
+   Managed configuration links point into the checkout, so keep it there.
+2. From the checkout run `bash bin/install.sh`. Start with Bash and Git; the
+   installer uses sudo for distribution prerequisites. On Arch it performs the
+   synchronized upgrade required by pacman; Debian and Amazon Linux install
+   prerequisites without a full system upgrade.
+3. Open a new zsh terminal. The installer preserves existing Oh My Zsh/custom
+   contents, installs missing shell components, and creates the alias trash
+   directory. It does not change your login shell; choose zsh separately if desired.
+4. On Windows, install CaskaydiaCove NF and restore the terminal snapshots below.
+   Check the WSL distribution name (`Ubuntu` in the snapshots).
+5. Restore credentials separately and authenticate GitHub/Copilot as needed.
+   `~/.keys` is optional and must never be added to this repository.
 
-The full `bash bin/install.sh` is a legacy convenience path, not a safe repair
-command: it performs system package updates, deletes and reinstalls
-`~/.oh-my-zsh` (including custom contents), and may change the login shell. Its
-package lists do not cover all prerequisites above, and its Lazygit download is
-x86_64-only. Prefer the staged restore above on an existing machine or ARM64.
-Review the Git identity in `.zshrc`: each interactive launch writes that name and
-email into global Git configuration.
+The installer installs checksum-verified editor binaries, Node/npm, Lazygit,
+configuration links, and global Codex documents. It restores plugins from the
+checkout's `lazy-lock.json`, runs their build hooks, installs the configured
+Treesitter parsers, and waits for Pyright. Network/build failures stop the run.
+It uses a disposable configuration copy while restoring plugins so the source
+lockfile is preserved, including any local edits. Existing shell repositories
+are reused without resetting or updating their contents. Existing managed files
+are backed up before replacement; matching links and files are reused.
+
+Review the Git identity in `.zshrc`: interactive launches write that name and
+email into global Git configuration. The installer does not install optional
+language-specific tools (Black, Pylint, rust-analyzer, or Stylua), fonts, credentials,
+or Windows terminal settings. Existing NVM initialization can select a different
+Node version in interactive shells; `~/.local/bin` remains the managed tool path.
 
 ## Minimal troubleshooting and rollback
 
@@ -105,27 +100,30 @@ Start a new Codex session to pick up the installed instructions. An existing
 
 ## Editor installation
 
-The complete `bin/install.sh` also installs system packages and shell components.
-To install only the editor binaries and configuration links, run from the repository:
+To update the editor and its configuration without installing system packages or
+shell components, run from the repository (distribution prerequisites must exist):
 
 ```bash
 bash <<'SH'
-set -e
+set -euo pipefail
 export PATH="$HOME/.local/bin:$PATH"
 source lib/config.sh
 source lib/tools.sh
+install_node
+install_lazygit
 install_neovim
 install_delta
 install_tree_sitter
 install_utftex
 install_termtex
 setup_symlinks
+restore_neovim_plugins
 SH
 ```
 
 These steps preserve replaced files, directories, and links in adjacent
 `*.backup.XXXXXXXX/original` paths. Running them again leaves matching links alone.
-They do not update Neovim plugins; `configs/nvim/lazy-lock.json` owns plugin pins.
+Plugin restoration uses the pins in `configs/nvim/lazy-lock.json`.
 
 | Component | Version policy | Installation |
 | --- | --- | --- |
@@ -134,11 +132,14 @@ They do not update Neovim plugins; `configs/nvim/lazy-lock.json` owns plugin pin
 | Tree-sitter CLI | Pinned 0.25.10; needed to build the LaTeX parser | `~/.local/bin/tree-sitter` |
 | utftex | Pinned libtexprintf 1.31; built with GCC and Make | `~/.local/bin/utftex` |
 | termtex | Pinned c407d5cf5251; built with a temporary, verified Go 1.27.3 toolchain | `~/.local/bin/termtex` |
-| Lazygit | Current setup tested with 0.56.0 | Full installer fetches the latest release |
+| Lazygit | Pinned 0.56.0 | `~/.local/bin/lazygit` |
+| Node.js / npm | Minimum 22.22.0; installs 22.22.0 when needed | `~/.local/opt/node-v22.22.0`, linked into `~/.local/bin` |
 
-Tool downloads use official GitHub release archives and pinned SHA256 checksums.
+Tool downloads use official upstream release archives and pinned SHA256 checksums.
 Linux x86_64 and ARM64 are supported. The ARM64 Delta archive requires
-glibc. Updating a binary pin requires updating its matching checksums in `lib/tools.sh`.
+glibc. The Markdown preview plugin's prebuilt Linux server supports x86_64 only;
+the full plugin restore reports an error if that binary is unavailable.
+Updating a binary pin requires updating its matching checksums in `lib/tools.sh`.
 
 The editor needs Lazygit, Git, Node.js, ripgrep, and the configured Nerd Font.
 Markdown preview uses the plugin's prebuilt application; avoid rebuilding its old
@@ -294,6 +295,7 @@ or rejection of download checksums, without network access:
 
 ```bash
 bash tests/installer.sh
+bash tests/installer-workflow.sh
 ```
 
 To include real binary downloads and version checks:
@@ -302,10 +304,14 @@ To include real binary downloads and version checks:
 bash tests/installer.sh --download
 ```
 
-The optional check installs Delta into the temporary home and installs Neovim there
-when the current executable does not meet the minimum version. It leaves existing
-binaries alone. Neither check runs system package or shell installers, or modifies
-the active terminal configuration.
+The optional check installs the managed binaries in a temporary home, restores
+plugins and language tools, and checks workspace, theme, and math integration.
+It tests restoring a changed plugin revision, preserving the generated Markdown
+bridge on reruns, and reporting a failed preview binary download. It requires
+network access, GCC, Make, Git, curl, tar, gzip, and unzip. Both test modes preserve
+the working copy's lockfile and avoid sudo/system package installation. Shell
+rerun behavior is exercised with isolated fixtures and mocked clone commands in
+`tests/installer-workflow.sh`.
 
 Neovim checks require the installed plugin versions and Neovim 0.11.7 or newer.
 Run from the repository with the correct Neovim executable first in `PATH`:

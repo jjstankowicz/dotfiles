@@ -14,7 +14,7 @@ get_os() {
 get_os_like() {
     if [ -f /etc/os-release ]; then
         . /etc/os-release
-        echo "$ID_LIKE"
+        echo "${ID_LIKE:-}"
     else
         echo ""
     fi
@@ -24,87 +24,24 @@ check_cmd_installed() {
     command -v "$1" >/dev/null 2>&1
 }
 
+# Install prerequisites explicitly; editor binaries and Node are managed separately.
 install_amazon_linux_packages() {
-    echo "Detected Amazon Linux; installing packages via dnf/yum..."
-
-    local packages_to_install=()
-
-    check_cmd_installed zsh      || packages_to_install+=("zsh")
-    check_cmd_installed git      || packages_to_install+=("git")
-    check_cmd_installed gcc      || packages_to_install+=("gcc")
-    check_cmd_installed make     || packages_to_install+=("make")
-    check_cmd_installed tmux     || packages_to_install+=("tmux")
-    check_cmd_installed neovim   || packages_to_install+=("neovim")
-    check_cmd_installed rg       || packages_to_install+=("ripgrep")
-    check_cmd_installed fzf      || packages_to_install+=("fzf")
-    check_cmd_installed lazygit  || packages_to_install+=("lazygit")
-
-    if [ "${#packages_to_install[@]}" -eq 0 ]; then
-        echo "All required packages already installed."
-        return 0
-    fi
-
-    if command -v dnf >/dev/null 2>&1; then
-        sudo dnf update -y
-        sudo dnf install -y "${packages_to_install[@]}"
-    else
-        sudo yum update -y
-        sudo yum install -y "${packages_to_install[@]}"
-    fi
+    local manager=dnf
+    command -v dnf >/dev/null 2>&1 || manager=yum
+    sudo "$manager" install -y ca-certificates curl tar gzip unzip gcc gcc-c++ make \
+        zsh git tmux ripgrep fzf
 }
 
 install_debian_packages() {
-    echo "Detected Debian/Ubuntu; installing packages via apt..."
-
-    sudo apt-get update -y
-
-    local packages_to_install=()
-
-    check_cmd_installed zsh      || packages_to_install+=("zsh")
-    check_cmd_installed git      || packages_to_install+=("git")
-    check_cmd_installed build-essential >/dev/null 2>&1 || packages_to_install+=("build-essential")
-    check_cmd_installed tmux     || packages_to_install+=("tmux")
-    check_cmd_installed nvim     || packages_to_install+=("neovim")
-    check_cmd_installed rg       || packages_to_install+=("ripgrep")
-    check_cmd_installed fd       || packages_to_install+=("fd-find")
-    check_cmd_installed fzf      || packages_to_install+=("fzf")
-    check_cmd_installed lazygit  || packages_to_install+=("lazygit")
-
-    if [ "${#packages_to_install[@]}" -eq 0 ]; then
-        echo "All required packages already installed."
-        return 0
-    fi
-
-    sudo apt-get install -y "${packages_to_install[@]}"
+    sudo apt-get update
+    sudo apt-get install -y ca-certificates curl tar gzip unzip build-essential \
+        zsh git tmux ripgrep fd-find fzf
 }
 
 install_arch_packages() {
-    echo "Detected Arch/Omarchy; installing packages via pacman..."
-
-    # Sync package database first
-    sudo pacman -Syu --noconfirm
-
-    local packages_to_install=()
-
-    check_cmd_installed zsh      || packages_to_install+=("zsh")
-    check_cmd_installed git      || packages_to_install+=("git")
-    check_cmd_installed gcc      || packages_to_install+=("gcc")
-    check_cmd_installed make     || packages_to_install+=("make")
-    check_cmd_installed tmux     || packages_to_install+=("tmux")
-    check_cmd_installed nvim     || packages_to_install+=("neovim")
-    check_cmd_installed rg       || packages_to_install+=("ripgrep")
-    check_cmd_installed fd       || packages_to_install+=("fd")
-    check_cmd_installed fzf      || packages_to_install+=("fzf")
-    check_cmd_installed lazygit  || packages_to_install+=("lazygit")
-    check_cmd_installed tree     || packages_to_install+=("tree")
-    check_cmd_installed curl     || packages_to_install+=("curl")
-
-    if [ "${#packages_to_install[@]}" -eq 0 ]; then
-        echo "All required packages already installed."
-        return 0
-    fi
-
-    sudo pacman -S --needed --noconfirm "${packages_to_install[@]}"
+    # Arch requires a synchronized full upgrade to avoid unsupported partial upgrades.
+    sudo pacman -Syu --needed --noconfirm ca-certificates curl tar gzip unzip \
+        base-devel zsh git tmux ripgrep fd fzf
 }
 
 install_packages_for_os() {

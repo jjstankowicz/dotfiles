@@ -1,12 +1,79 @@
 #!/bin/bash
 
-install_lazygit() {
-    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
-    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
-    tar xf lazygit.tar.gz lazygit
-    sudo install lazygit /usr/local/bin
-    rm -f lazygit lazygit.tar.gz
-}
+install_lazygit() (
+    local version="0.56.0" architecture checksum download_dir
+    local binary="$HOME/.local/bin/lazygit"
+    if [ -x "$binary" ] && "$binary" --version | grep -q "version=$version,"; then
+        echo "Lazygit $version is already installed"
+        return 0
+    fi
+    case "$(uname -s):$(uname -m)" in
+        Linux:x86_64)
+            architecture=x86_64
+            checksum=ced13c2ae074bbf6c201bc700ee2971e193b811c3b2ae0ed4d00d6225c6c9ab7 ;;
+        Linux:aarch64|Linux:arm64)
+            architecture=arm64
+            checksum=57503b0074beaaeaac35da2d462d1ddf2af52d8c822766c935ea5515ba21875c ;;
+        *) echo 'Unsupported platform for Lazygit' >&2; return 1 ;;
+    esac
+    download_dir="$(mktemp -d)" || return 1
+    trap 'rm -rf "$download_dir"' EXIT
+    download_verified_archive \
+        "https://github.com/jesseduffield/lazygit/releases/download/v$version/lazygit_${version}_linux_$architecture.tar.gz" \
+        "$checksum" "$download_dir/lazygit.tar.gz" || return 1
+    tar -xzf "$download_dir/lazygit.tar.gz" -C "$download_dir" lazygit || return 1
+    "$download_dir/lazygit" --version || return 1
+    mkdir -p "$HOME/.local/bin" || return 1
+    preserve_config "$binary" || return 1
+    install -m755 "$download_dir/lazygit" "$binary"
+)
+
+# Provide Node and npm without replacing the system runtime or requiring NVM.
+install_node() (
+    local version="22.22.0" architecture checksum archive_dir download_dir installed_version
+    local install_dir="$HOME/.local/opt/node-v$version"
+    installed_version="$(node --version 2>/dev/null | sed 's/^v//' || true)"
+    if [ -n "$installed_version" ] && command -v npm >/dev/null 2>&1 && \
+        [ "$(printf '%s\n' "$version" "$installed_version" | sort -V | head -n 1)" = "$version" ]; then
+        echo "Node $installed_version and npm are already available"
+        return 0
+    fi
+    case "$(uname -s):$(uname -m)" in
+        Linux:x86_64)
+            architecture=x64
+            checksum=c33c39ed9c80deddde77c960d00119918b9e352426fd604ba41638d6526a4744 ;;
+        Linux:aarch64|Linux:arm64)
+            architecture=arm64
+            checksum=25ba95dfb96871fa2ef977f11f95ea90818c8fa15c0f2110771db08d4ba423be ;;
+        *) echo 'Unsupported platform for Node' >&2; return 1 ;;
+    esac
+    archive_dir="node-v$version-linux-$architecture"
+    download_dir="$(mktemp -d)" || return 1
+    trap 'rm -rf "$download_dir"' EXIT
+    download_verified_archive "https://nodejs.org/dist/v$version/$archive_dir.tar.gz" \
+        "$checksum" "$download_dir/node.tar.gz" || return 1
+    tar -xzf "$download_dir/node.tar.gz" -C "$download_dir" || return 1
+    "$download_dir/$archive_dir/bin/node" --version || return 1
+    mkdir -p "$HOME/.local/opt" "$HOME/.local/bin" || return 1
+    preserve_config "$install_dir" || return 1
+    mv "$download_dir/$archive_dir" "$install_dir" || return 1
+    local command_name
+    for command_name in node npm npx; do
+        link_config "$install_dir/bin/$command_name" "$HOME/.local/bin/$command_name" || return 1
+    done
+    "$HOME/.local/bin/npm" --version
+)
+
+# Use a disposable copy so Lazy cannot rewrite the checkout's plugin pins.
+restore_neovim_plugins() (
+    local config_dir
+    config_dir="$(mktemp -d)" || return 1
+    trap 'rm -rf "$config_dir"' EXIT
+    mkdir -p "$config_dir/nvim" || return 1
+    cp -a "$DOTFILES_DIR/configs/nvim/." "$config_dir/nvim/" || return 1
+    XDG_CONFIG_HOME="$config_dir" NVIM_APPNAME=nvim \
+        nvim --headless -u NONE -l "$DOTFILES_DIR/bin/restore-plugins.lua" "$config_dir/nvim"
+)
 
 # Download release archives only when they match the pinned upstream SHA256 digest.
 download_verified_archive() {
@@ -20,7 +87,7 @@ install_neovim() (
     local install_dir="$HOME/.local/opt/neovim-v$version"
     local binary="$HOME/.local/bin/nvim"
 
-    installed_version="$(nvim --version 2>/dev/null | sed -n '1s/^NVIM v\([0-9]*\.[0-9]*\.[0-9]*\)$/\1/p' || true)"
+    installed_version="$("$binary" --version 2>/dev/null | sed -n '1s/^NVIM v\([0-9]*\.[0-9]*\.[0-9]*\)$/\1/p' || true)"
     if [ -n "$installed_version" ] && [ "$(printf '%s\n' "$version" "$installed_version" | sort -V | head -n 1)" = "$version" ]; then
         echo "Neovim $installed_version already meets the minimum version $version"
         return 0
