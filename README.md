@@ -79,9 +79,15 @@ The installer copies these files and the two referenced runbooks into
 It uses regular files so a Windows Codex home on `/mnt/c` can read them without
 following WSL symlinks. Existing differing files or links receive adjacent
 `*.backup.XXXXXXXX/original` backups; identical regular files are left alone.
-Other Codex configuration, credentials, and skills are left in place.
+The installer also copies the four personal skills in `configs/codex/skills/`:
+`good-to-go`, `no-kowtow`, `plan-it`, and `prcr`, including their UI metadata and
+reference files. Their instructions are preserved unchanged. Unrelated skills,
+bundled `.system` skills, other Codex configuration, and credentials are left in
+place. Changed managed files receive the same backups; extra local files are
+preserved. Symbolic links or non-directory paths where a skill directory belongs
+are rejected rather than followed or overwritten.
 
-To install only the Codex documents, without package or editor downloads:
+To install only the Codex documents and personal skills, without package or editor downloads:
 
 ```bash
 bash <<'SH'
@@ -95,6 +101,11 @@ SH
 and WSL use separate Codex homes, run this once for each home by setting
 `CODEX_HOME` for that invocation; unset it to target the Linux `~/.codex` default.
 Edit the tracked files in `configs/codex/` and rerun this step to deploy changes.
+To install only personal skills, source the same library and call
+`setup_codex_skills`. Install the Codex documents first on a fresh PC: `plan-it`
+uses the included planning cookbook. The installer runs from Bash on Linux,
+macOS, or WSL; a Windows desktop Codex home can be targeted from WSL using
+`CODEX_HOME` as described above.
 Start a new Codex session to pick up the installed instructions. An existing
 `AGENTS.override.md` takes precedence over `AGENTS.md` and is left untouched.
 

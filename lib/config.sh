@@ -32,12 +32,37 @@ copy_config() {
     cp "$source" "$destination"
 }
 
+# Merge regular directories without following destination directory links.
+copy_config_directory() (
+    local source="$1" destination="$2" entry
+    if [ -L "$destination" ] || { [ -e "$destination" ] && [ ! -d "$destination" ]; }; then
+        echo "Refusing to install through a linked or non-directory path: $destination" >&2
+        return 1
+    fi
+    mkdir -p "$destination" || return 1
+    shopt -s dotglob nullglob
+    for entry in "$source"/*; do
+        if [ -d "$entry" ]; then
+            copy_config_directory "$entry" "$destination/$(basename "$entry")" || return 1
+        else
+            copy_config "$entry" "$destination/$(basename "$entry")" || return 1
+        fi
+    done
+)
+
+# Install only repository-managed skills, leaving other skill directories intact.
+setup_codex_skills() {
+    local codex_dir="${CODEX_HOME:-$HOME/.codex}"
+    copy_config_directory "$DOTFILES_DIR/configs/codex/skills" "$codex_dir/skills"
+}
+
 setup_codex_config() {
     local codex_dir="${CODEX_HOME:-$HOME/.codex}"
     copy_config "$DOTFILES_DIR/configs/codex/AGENTS.md" "$codex_dir/AGENTS.md" || return 1
     copy_config "$DOTFILES_DIR/configs/codex/machine-context.md" "$codex_dir/machine-context.md" || return 1
     copy_config "$DOTFILES_DIR/configs/codex/runbooks/copilot-review.md" "$codex_dir/runbooks/copilot-review.md" || return 1
-    copy_config "$DOTFILES_DIR/configs/codex/runbooks/planning-cookbook.md" "$codex_dir/runbooks/planning-cookbook.md"
+    copy_config "$DOTFILES_DIR/configs/codex/runbooks/planning-cookbook.md" "$codex_dir/runbooks/planning-cookbook.md" || return 1
+    setup_codex_skills
 }
 
 setup_symlinks() {

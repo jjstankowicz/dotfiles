@@ -20,6 +20,11 @@ source "$repository_dir/lib/config.sh"
 source "$repository_dir/lib/tools.sh"
 mkdir -p "$HOME/.config/nvim" "$HOME/.config/lazygit"
 mkdir -p "$HOME/.codex/runbooks"
+mkdir -p "$HOME/.codex/skills/plan-it" "$HOME/.codex/skills/unrelated" "$HOME/.codex/skills/.system"
+printf original-skill > "$HOME/.codex/skills/plan-it/SKILL.md"
+printf local-extra > "$HOME/.codex/skills/plan-it/local.txt"
+printf unrelated-skill > "$HOME/.codex/skills/unrelated/SKILL.md"
+printf bundled-skill > "$HOME/.codex/skills/.system/SKILL.md"
 printf original-instructions > "$HOME/.codex/AGENTS.md"
 printf original-machine > "$HOME/.codex/machine-context.md"
 printf original-runbook > "$HOME/.codex/runbooks/copilot-review.md"
@@ -38,6 +43,18 @@ for path in AGENTS.md machine-context.md runbooks/copilot-review.md runbooks/pla
     [[ -f "$HOME/.codex/$path" && ! -L "$HOME/.codex/$path" ]]
     cmp "$repository_dir/configs/codex/$path" "$HOME/.codex/$path"
 done
+while IFS= read -r -d '' source; do
+    relative="${source#"$repository_dir/configs/codex/"}"
+    [[ -f "$HOME/.codex/$relative" && ! -L "$HOME/.codex/$relative" ]]
+    cmp "$source" "$HOME/.codex/$relative"
+done < <(find "$repository_dir/configs/codex/skills" -type f -print0)
+[[ $(cat "$HOME"/.codex/skills/plan-it/SKILL.md.backup.*/original) == original-skill ]]
+[[ $(cat "$HOME/.codex/skills/plan-it/local.txt") == local-extra ]]
+[[ $(cat "$HOME/.codex/skills/unrelated/SKILL.md") == unrelated-skill ]]
+[[ $(cat "$HOME/.codex/skills/.system/SKILL.md") == bundled-skill ]]
+[[ $(find "$HOME/.codex/skills" -name SKILL.md | wc -l) == 6 ]]
+[[ -f "$HOME/.codex/skills/plan-it/../../runbooks/planning-cookbook.md" ]]
+[[ -f "$HOME/.codex/skills/prcr/references/github-reviews.md" ]]
 [[ $(cat "$HOME"/.codex/AGENTS.md.backup.*/original) == original-instructions ]]
 [[ $(cat "$HOME"/.codex/machine-context.md.backup.*/original) == original-machine ]]
 [[ $(cat "$HOME"/.codex/runbooks/copilot-review.md.backup.*/original) == original-runbook ]]
@@ -63,6 +80,7 @@ for path in AGENTS.md machine-context.md runbooks/copilot-review.md runbooks/pla
     [[ -f "$CODEX_HOME/$path" && ! -L "$CODEX_HOME/$path" ]]
     cmp "$repository_dir/configs/codex/$path" "$CODEX_HOME/$path"
 done
+diff -r "$repository_dir/configs/codex/skills" "$CODEX_HOME/skills"
 [[ $(cat "$CODEX_HOME"/AGENTS.md.backup.*/original) == custom-instructions ]]
 custom_link_backup="$(find "$CODEX_HOME" -path '*/AGENTS.md.backup.*/original')"
 [[ -L "$custom_link_backup" ]]
@@ -72,6 +90,18 @@ custom_link_backup="$(find "$CODEX_HOME" -path '*/AGENTS.md.backup.*/original')"
 backup_count="$(find "$HOME" -name '*.backup.*' | wc -l)"
 setup_codex_config
 [[ $(find "$HOME" -name '*.backup.*' | wc -l) == "$backup_count" ]]
+
+# Refuse directory links rather than writing into another skill installation.
+export CODEX_HOME="$HOME/linked skill home"
+mkdir -p "$CODEX_HOME/skills" "$HOME/external-skill"
+printf external-skill > "$HOME/external-skill/SKILL.md"
+ln -s "$HOME/external-skill" "$CODEX_HOME/skills/good-to-go"
+if setup_codex_skills; then
+    echo 'Expected a symbolic skill directory to be rejected' >&2
+    exit 1
+fi
+[[ -L "$CODEX_HOME/skills/good-to-go" ]]
+[[ $(cat "$HOME/external-skill/SKILL.md") == external-skill ]]
 unset CODEX_HOME
 
 printf test > "$scratch_dir/download.txt"

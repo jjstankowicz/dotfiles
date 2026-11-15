@@ -1,0 +1,4 @@
+interface:
+  display_name: "No Kowtow"
+  short_description: "Reassess alternatives and recommend from evidence."
+  default_prompt: "Use $no-kowtow to independently reassess the current recommendation, compare the plausible extremes, and choose a defensible position."

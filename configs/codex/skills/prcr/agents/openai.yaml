@@ -1,0 +1,4 @@
+interface:
+  display_name: "PRCR"
+  short_description: "Independent PR audit with GitHub review comments"
+  default_prompt: "Use $prcr to independently audit the current pull request, create a draft PR if needed, and publish or recheck actionable findings."

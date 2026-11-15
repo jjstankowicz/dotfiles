@@ -1,0 +1,3 @@
+interface:
+  display_name: "Good to Go"
+  short_description: "Check readiness with one question at a time"
