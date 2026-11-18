@@ -92,10 +92,23 @@ local function check_backgrounds()
     end
     local cursor = get "NoiceCursor"
     assert(cursor.blend == 0 and cursor.nocombine)
+    assert(get("TelescopeNormal").bg == frame.active)
+    assert(get("TelescopeBorder").fg == frame.border)
+    assert(get("TelescopePromptBorder").fg == frame.accent)
+    assert(get("TelescopePromptTitle").bg == frame.accent)
+    assert(get("TelescopeSelection").bg == frame.selection)
+    assert(get("TelescopeMatching").fg == frame.accent)
 end
 
 local ok, error_message = pcall(function()
     theme.setup()
+    local telescope = theme.telescope()
+    assert(telescope.layout_strategy == "flex")
+    assert(telescope.sorting_strategy == "ascending")
+    assert(telescope.winblend == theme.popup_blend)
+    assert(telescope.layout_config.width == 0.86 and telescope.layout_config.height == 0.74)
+    assert(telescope.layout_config.horizontal.prompt_position == "top")
+    assert(telescope.layout_config.vertical.prompt_position == "top")
     assert(vim.g.colors_name == "vscode_modern" and vim.o.background == "light")
     assert(vim.o.winblend == theme.popup_blend)
     assert(starts == 1 and reloads == 1)

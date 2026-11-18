@@ -91,6 +91,30 @@ function M.statusline()
     }
 end
 
+---Return Telescope layout defaults that match the shared popup style.
+---@return table
+function M.telescope()
+    return {
+        border = true,
+        layout_strategy = "flex",
+        sorting_strategy = "ascending",
+        winblend = M.popup_blend,
+        layout_config = {
+            width = 0.86,
+            height = 0.74,
+            horizontal = {
+                prompt_position = "top",
+                preview_width = 0.54,
+            },
+            vertical = {
+                prompt_position = "top",
+                mirror = true,
+                preview_height = 0.48,
+            },
+        },
+    }
+end
+
 local job
 local generation = 0
 local windows_theme_command = {
@@ -170,6 +194,17 @@ local function apply_theme_highlights()
     vim.api.nvim_set_hl(0, "ScrollView", { fg = frame.border })
     vim.api.nvim_set_hl(0, "ScrollViewHover", { fg = frame.accent })
     vim.api.nvim_set_hl(0, "ScrollViewRestricted", { fg = frame.focused })
+    vim.api.nvim_set_hl(0, "TelescopeNormal", { fg = frame.foreground, bg = frame.active })
+    vim.api.nvim_set_hl(0, "TelescopeBorder", { fg = frame.border, bg = frame.active })
+    vim.api.nvim_set_hl(0, "TelescopePromptNormal", { fg = frame.foreground, bg = frame.active })
+    vim.api.nvim_set_hl(0, "TelescopePromptBorder", { fg = frame.accent, bg = frame.active })
+    vim.api.nvim_set_hl(0, "TelescopePromptTitle", { fg = "#ffffff", bg = frame.accent, bold = true })
+    vim.api.nvim_set_hl(0, "TelescopeResultsTitle", { fg = frame.focused, bg = frame.active, bold = true })
+    vim.api.nvim_set_hl(0, "TelescopePreviewTitle", { fg = frame.focused, bg = frame.active, bold = true })
+    vim.api.nvim_set_hl(0, "TelescopeSelection", { fg = frame.foreground, bg = frame.selection })
+    vim.api.nvim_set_hl(0, "TelescopeSelectionCaret", { fg = frame.accent, bg = frame.selection, bold = true })
+    vim.api.nvim_set_hl(0, "TelescopeMatching", { fg = frame.accent, bold = true })
+    vim.api.nvim_set_hl(0, "TelescopePromptCounter", { fg = frame.focused })
     vim.api.nvim_set_hl(0, "FramedNormal", { fg = normal.fg, bg = frame.active })
     vim.api.nvim_set_hl(0, "FramedNormalNC", { fg = normal.fg, bg = frame.inactive })
     vim.api.nvim_set_hl(0, "FramedBackdrop", { fg = frame.backdrop, bg = frame.backdrop })

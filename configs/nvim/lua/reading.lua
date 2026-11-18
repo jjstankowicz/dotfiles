@@ -32,7 +32,6 @@ local function setup_scrollbars(options)
             if vim.g.scrollview_enabled then
                 paused = true
                 scrollview.set_state(false)
-                schedule_restore()
             end
         end,
     })

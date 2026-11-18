@@ -45,7 +45,7 @@ require("language_tools").setup()
 
 -- Telescope keymaps
 require("telescope").setup {
-    defaults = {
+    defaults = vim.tbl_deep_extend("force", require("theme").telescope(), {
         file_ignore_patterns = { "node_modules", ".git" },
         vimgrep_arguments = {
             "rg",
@@ -62,7 +62,7 @@ require("telescope").setup {
                 ["<C-h>"] = "which_key",
             },
         },
-    },
+    }),
     pickers = {
         find_files = {
             find_command = { "rg", "--files", "--hidden", "--glob", "!**/.git/*" },

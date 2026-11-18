@@ -9,11 +9,29 @@ local function text(expected)
     )
     assert(not vim.g.scrollview_enabled, "Scrollbar updates resumed inside the prompt")
 end
+
+-- Let scheduled callbacks run after TelescopeFindPre but before Telescope mounts
+-- its prompt. This covers UI event loops that expose the pre-window gap.
+vim.api.nvim_create_autocmd("User", {
+    pattern = "TelescopeFindPre",
+    once = true,
+    callback = function()
+        vim.wait(20, function()
+            return false
+        end)
+    end,
+})
+
 local steps = {
     function()
         assert(vim.g.scrollview_enabled)
         require("telescope.builtin").live_grep()
         prompt = vim.api.nvim_get_current_buf()
+        local picker = require("telescope.actions.state").get_current_picker(prompt)
+        assert(picker.layout_strategy == "flex", "Search lost its responsive layout")
+        assert(picker.sorting_strategy == "ascending", "Search prompt moved below its results")
+        assert(vim.wo[picker.prompt_win].winblend == require("theme").popup_blend)
+        assert(vim.wo[picker.results_win].winblend == require("theme").popup_blend)
     end,
     function()
         text ""
